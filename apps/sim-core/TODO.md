@@ -2,7 +2,7 @@
 
 This document tracks outdated dependencies, deprecated patterns, and proposed upgrades for the sim-core application.
 
-**Last Updated**: February 2026  
+**Last Updated**: March 2026  
 **Scope**: `apps/sim-core/` only Ã¢â‚¬â€ everything else in the monorepo is out of scope  
 **Extraction Goal**: sim-core will be extracted into its own repository at the end of this project  
 **Review Panel**: Expert personas (QA, Frontend, WASM, UX, DevOps, Documentation) reviewed TODO plan and PR work; recommendations captured in "Review Panel" sections below.
@@ -20,6 +20,7 @@ This document tracks outdated dependencies, deprecated patterns, and proposed up
 | ~~Dev Tooling Cleanup~~ | Ã¢Å“â€¦ Done | Ã¢â‚¬â€ | why-did-you-render removed |
 | ~~Build Tooling~~ | Ã¢Å“â€¦ Done | Ã¢â‚¬â€ | Migrated to Vite 7.3 |
 | ~~Deprecated Packages~~ | Ã¢Å“â€¦ Done | Ã¢â‚¬â€ | All deprecated packages replaced or removed |
+| ~~Example Projects~~ | ✅ Done | — | Zip-based loading from public/example_projects/; inline blob deleted |
 
 ---
 
@@ -134,6 +135,16 @@ This document tracks outdated dependencies, deprecated patterns, and proposed up
 - [x] Ensure import/export .zip works standalone
 - [ ] Test fully offline operation (requires running the app)
 
+
+#### Phase 5b: Example Projects Architecture (Mar 2026)
+- [x] Move example .zip files from `example_projects/` to `packages/core/public/example_projects/`
+- [x] Create `manifest.json` with metadata for all 13 examples
+- [x] Delete `builtinSimulations.ts` (177-line inline data blob)
+- [x] Rewrite bootstrap to fetch manifest instead of reading inline data
+- [x] Auto-import default example zip on first visit (no hardcoded localStorage seed)
+- [x] Example projects menu fetches + imports zips on click
+- [x] Extract reusable `parseZipToProject()`, `fetchAndParseProject()`, `useImportProjectFromUrl()`
+- [x] Add E2E test coverage: `example-projects.spec.ts` (13 tests, one per example zip)
 ### Packages to Remove (Feature-Related)
 
 ```
@@ -719,8 +730,9 @@ The following features are being KEPT and are now covered by E2E tests:
 | `ui-features.spec.ts` | 9 | Ã¢Å“â€¦ Implemented |
 | `persistence.spec.ts` | 9 | Ã¢Å“â€¦ Implemented |
 | `dependencies.spec.ts` | 7 | Ã¢Å“â€¦ Implemented |
+| `example-projects.spec.ts` | 13 | ✅ Implemented |
 
-**Total: 66 tests covering all identified features**
+**Total: 79 tests covering all identified features** (66 original + 13 example project imports)
 
 ### Ã°Å¸Å¸Â¢ Low: Minor Updates Needed
 
@@ -1074,7 +1086,7 @@ Expert panel review of the TODO plan Ã¢â‚¬â€ suggested additions:
 
 ### UX Expert
 - [x] **Empty editor UX** Ã¢â‚¬â€ when Monaco model missing, HashCoreEditorFile returns null; user sees blank. Consider loading skeleton or "Opening fileÃ¢â‚¬Â¦" placeholder.
-- [x] **Verify DefaultProject fallback** Ã¢â‚¬â€ ensure @hash/wildfires-regrowth loads correctly on first visit with empty localStorage.
+- [x] **Verify DefaultProject fallback** (now auto-imports default example zip) Ã¢â‚¬â€ ensure @hash/wildfires-regrowth loads correctly on first visit with empty localStorage.
 
 ### Performance Engineer
 - [ ] **Track treeshake: false impact** Ã¢â‚¬â€ bundle ~53s build; re-enable when Rollup fixes or @fluentui/sanddance replaced. Add bundle size baseline.
