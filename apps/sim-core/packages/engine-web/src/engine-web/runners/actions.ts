@@ -1,5 +1,6 @@
 import { v4 as uuid } from "uuid";
 
+import { toError } from "./toError";
 import {
   AgentState,
   RunnerRequestArgs,
@@ -72,14 +73,21 @@ const initialize = async (
   request: RunnerRequestArgs<"initialize">,
   runner: RunnerState
 ) => {
+  // Stop any background runSim and prevent stale concurrent handlers from
+  // producing responses tagged with the new simulation ID.  We defer setting
+  // simulationRunId until after all async work so that any in-flight
+  // getReadySteps response still carries the OLD id (which the main thread
+  // will discard because that simulation was already cleared).
+  runner.running = false;
+  runner.stepsLeft = 0;
+  runner.accumulatedSteps = {};
+
   if (runner.wrapper) {
     runner.wrapper.free();
     runner.wrapper = null;
   }
 
-  // Prep the runner
-  runner.simulationRunId = request.presetRunId ?? uuid();
-  runner.stepsLeft = request.numSteps;
+  const newSimulationRunId = request.presetRunId ?? uuid();
   runner.stepsTaken = 0;
   runner.earlyStop = false;
   runner.stopMessage = null;
@@ -123,8 +131,11 @@ const initialize = async (
   runner.latestState = runner.wrapper.initial_state() as AgentState[];
   runner.parsedSimulation.behaviors.updateAgentCache(runner.latestState);
 
-  // Add the initial state to the accumulated steps
-  // So when we give our response, the initial state is there
+  // Now that init is complete, assign the new ID and initial state.
+  // Any concurrent handler that captured runner state before this point
+  // would have seen the old simulationRunId (harmlessly ignored).
+  runner.simulationRunId = newSimulationRunId;
+  runner.stepsLeft = request.numSteps;
   runner.accumulatedSteps = { 0: runner.latestState };
 
   // Ensure the behavior's properties are up to date
@@ -147,7 +158,7 @@ const step = async (
   runner.running = true;
 
   await runSim(runner).catch((err) => {
-    runner.runnerError = err instanceof Error ? err : new Error(String(err));
+    runner.runnerError = toError(err);
   });
 };
 
@@ -161,7 +172,7 @@ const play = (request: RunnerRequestArgs<"play">, runner: RunnerState) => {
     runner.running = true;
 
     runSim(runner).catch((err) => {
-      runner.runnerError = err instanceof Error ? err : new Error(String(err));
+      runner.runnerError = toError(err);
     });
   }
 };
